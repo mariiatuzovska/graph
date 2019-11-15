@@ -2,131 +2,127 @@ package main
 
 import (
 	"encoding/csv"
-	"log"
+	"fmt"
 	"os"
 )
 
-// Data structure for quick getting data
-type Data struct {
-	data map[string][]string
+type graph struct {
+	graph map[string][]string
+	road  map[string]int
+	q     []queue
 }
 
-// Road structure 
-type Road stuct {
-	head 	string
-	road 	map[string]int
-	visited map[string]bool
+type queue struct {
+	vertex string
+	step   int
 }
-
-// type graph struct {
-// 	reachabMatrix [][]bool
-// 	vertex        map[string]int
-// 	key           []string
-// 	count         int
-// }
-
-// func initialise(path string) *Data {
-
-// 	data := new(Data)
-// 	data.getDataCSV(path)
-
-// 	return data
-// }
 
 func main() {
 
-	g := initialise("G1.csv")
+	g := new(graph)
+	g.getDataCSV("G1.csv")
+	g.road = make(map[string]int)
+	g.q = make([]queue, 0)
+
+	// g.bfs("192.168.0.5", 0)
+	// fmt.Println(g.road)
+
+	// g.maxTime()
+
+	g.searchDisabled()
 
 }
 
-func newRoad()
+func (g *graph) getDataCSV(path string) {
 
-// func newGraph(data map[string][]string) *graph {
-
-// 	g := new(graph)
-// 	g.count = 0
-
-// 	for key := range data {
-// 		g.key[g.count] = key
-// 		g.vertex[key] = g.count
-// 		g.count++
-// 	}
-
-// 	g.reachabMatrix = make([][]bool, g.count)
-// 	for i := range g.reachabMatrix {
-// 		g.reachabMatrix[i] = make([]bool, g.count)
-// 		for j := range g.reachabMatrix[i] {
-// 			g.reachabMatrix[i][j] = false
-// 		}
-// 	}
-
-// 	for i, vertex := range g.key {
-
-// 		node := data[vertex]
-
-// 		for j, v := range node {
-// 			k, _ := g.vertex[v]
-// 			g.reachabMatrix[j][k] = true
-// 		}
-
-// 	}
-
-// 	return g
-// }
-
-func (g *Data) getDataCSV(path string) {
-
-	csvfile, err := os.Open(path)
-	if err != nil {
-		log.Fatalln("Couldn't open the csv file", path, err)
-	}
+	csvfile, _ := os.Open(path)
 	r := csv.NewReader(csvfile)
-	record, err := r.ReadAll()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	g.data = make(map[string][]string)
+	record, _ := r.ReadAll()
+	g.graph = make(map[string][]string)
 
 	for _, node := range record {
 		for _, vertex := range node {
-			_, exist := g.data[vertex]
+			_, exist := g.graph[vertex]
 			if exist == false {
-				g.data[vertex] = make([]string, 0)
+				g.graph[vertex] = make([]string, 0)
 			}
 		}
-		g.data[node[0]] = append(g.data[node[0]], node[1])
-		g.data[node[1]] = append(g.data[node[1]], node[0])
+		g.graph[node[0]] = append(g.graph[node[0]], node[1])
+		g.graph[node[1]] = append(g.graph[node[1]], node[0])
 	}
 
 	return
 }
 
-func (g *Data) dfs(vertex string) *Road {
+func (g *graph) bfs(vertex string, step int) {
 
-	road := new(Road)
-	road.head = vertex
+	g.road[vertex] = step
 
-	for v := range g.data {
-		road.visited[v] = false
+	if len(g.q) != 0 {
+		g.q = append(g.q[:0], g.q[1:]...)
 	}
-	road.visited[vertex] = true
 
-
-	return road
-}
-
-func (g *Data) babyDFS(road *Road) *Road{
-
-	for _, v := range g.data[road.head] {
-		road.visited[v] = true
-		_, exist := road[v]
-		if exist == true {
-			road[v]++
-		} else {
-			road[v] = 1
+	for _, v := range g.graph[vertex] {
+		_, exist := g.road[v]
+		if exist == false {
+			g.q = append(g.q, queue{vertex: v, step: step + 1})
 		}
 	}
 
-	return road
+	if len(g.q) != 0 {
+		g.bfs(g.q[0].vertex, g.q[0].step)
+	}
+
+	return
+}
+
+func (g *graph) maxTime() {
+
+	v1, v2, max := "", "", 4
+
+	for vertex := range g.graph {
+
+		g.road, g.q = make(map[string]int), make([]queue, 0)
+		g.bfs(vertex, 0)
+
+		for v, steps := range g.road {
+			if steps >= max {
+				v1, v2, max = vertex, v, steps
+				fmt.Println("From", v1, "to", v2, "is", max*2, "ms")
+			}
+		}
+	}
+
+}
+
+func (g *graph) searchDisabled() {
+
+	min, disabled := 1000, ""
+
+	for vertex := range g.graph {
+
+		g.road, g.q = make(map[string]int), make([]queue, 0)
+		g.bfs(vertex, 0)
+
+		if min > len(g.road) {
+			min = len(g.road)
+			disabled = vertex
+		}
+	}
+
+	fmt.Println("Probably disabled", disabled, "has", min, "nodes")
+
+}
+
+func writeDataCSV(path string, data [][]string) {
+
+	csvfile, _ := os.Create(path)
+	csvwriter := csv.NewWriter(csvfile)
+	for _, row := range data {
+		_ = csvwriter.Write(row)
+	}
+	csvwriter.Flush()
+	csvfile.Close()
+
+	fmt.Println("Data has written successfully into", path)
 }
