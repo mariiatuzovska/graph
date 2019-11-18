@@ -74,7 +74,7 @@ func main() {
 	g2 := new(Graph)
 	g2.getDataCSV("G2.csv")
 	// // визначено максимальний час затримки 4 мс
-	g2.maxTime(2)
+	// g2.maxTime(2)
 
 }
 
@@ -99,7 +99,7 @@ func (g *Graph) getDataCSV(path string) {
 	return
 }
 
-func (g *Graph) bfs(vertex string, step int) { // складність O(V+E)
+func (g *Graph) bfs(vertex string, step int) { // складність O(V*(V+E))
 
 	if step != 0 {
 		g.q = append(g.q[:0], g.q[1:]...) // зміщуємо чергу, видаливши перший елемент, який є вхідним
@@ -139,8 +139,6 @@ func (g *Graph) maxTime(max int) { // видасть усі пари, для я�
 	v1, v2 := "", ""
 
 	for vertex := range g.graph {
-
-		fmt.Println("Check", vertex)
 
 		g.road, g.q = make(map[string]int), make([]queue, 0)
 		g.bfs(vertex, 0)
@@ -223,6 +221,9 @@ func (g *Graph) writeGraphCSV(path string) {
 	csvwriter := csv.NewWriter(csvfile)
 	data := make([][]string, count)
 
+	//
+	// алгоритм створення мережі
+	//
 	// v[1] : 125  type of relationship 1 : all/{v[1]} (125 ребер)
 	// v[2] : 124  type of relationship 1 : all/{v[1], v[2]} (124 ребер)
 	// v[3] : 123  type of relationship 1 : all/{v[1], v[2], v[3]} (123 ребра)
