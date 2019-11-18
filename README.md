@@ -27,4 +27,4 @@
 
 3. не існує таких вузлів.
 
-4. відповідь запропонована у вигляді [`.csv`](https://github.com/mariiatuzovska/graph/blob/master/G2.csv) файлу.
+4. відповідь запропонована у вигляді [`.csv`](https://github.com/mariiatuzovska/graph/blob/master/G3.csv) файлу.

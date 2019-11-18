@@ -25,6 +25,7 @@ func main() {
 
 	g := new(Graph)
 	g.getDataCSV("G1.csv")
+	// g.getDataCSV("G2.csv")
 	g.road = make(map[string]int)
 	g.q = make([]queue, 0)
 
@@ -42,6 +43,7 @@ func main() {
 
 	// // (2)
 	// // визначено максимальний час затримки 6 мс
+	// // закоментовано, оскільки багато ребер
 	// g.maxTime(3)
 
 	//
@@ -60,19 +62,18 @@ func main() {
 	// fmt.Println(m)
 	// // можна перевірити матрицю на симетричність
 	// testMatrix()
-
 	// // визначено кількість витих пар
-	g.searchTwistedPairs()
+	fmt.Println("There are", g.searchTwistedPairs(), "twisted pairs")
 
 	//
 
 	// // (4)
 	// // створено довільний граф, у якого максимальний час затримки 4 мс
 	// // у мапі ключі не заіндексовані, тому при кожному виклику в нас різні графи
-	g.writeGraphCSV("G2.csv")
+	g.writeGraphCSV("G3.csv")
 	// // коректність графу
 	g2 := new(Graph)
-	g2.getDataCSV("G2.csv")
+	g2.getDataCSV("G3.csv")
 	// // визначено максимальний час затримки 4 мс
 	// g2.maxTime(2)
 
@@ -155,14 +156,13 @@ func (g *Graph) maxTime(max int) { // видасть усі пари, для я�
 
 func (g *Graph) searchDisabled() {
 
-	min, disabled := 126, ""
-
+	disabled, min := "", len(g.graph)
 	for vertex := range g.graph {
 
 		g.road, g.q = make(map[string]int), make([]queue, 0)
-		g.bfs(vertex, 0) // побудуємо пошук в глибину для деякої вершини
+		g.bfs(vertex, 0) // побудуємо пошук в ширину для деякої вершини
 
-		if len(g.road) == 126 { // всього вершин 126, якщо кількість рівна 126 -
+		if len(g.road) == min { // всього вершин len(g.graph), якщо кількість рівна len(g.graph) -
 			break // немає сенсу шукати не пов'язані вершини
 		}
 
@@ -180,27 +180,28 @@ func (g *Graph) searchDisabled() {
 
 }
 
-func (g *Graph) searchTwistedPairs() {
+func (g *Graph) searchTwistedPairs() int {
 
 	matrix, count := g.reachabMatrix(), 0
-	for i := 0; i < 125; i++ {
-		for j := i + 1; j < 125; j++ {
+	for i := 0; i < len(g.graph)-1; i++ {
+		for j := i + 1; j < len(g.graph)-1; j++ {
 			if matrix[i][j] == true {
 				count++
 			}
 		}
 	}
-	fmt.Println("There are", count, "twisted pairs")
+
+	return count
 }
 
 func (g *Graph) reachabMatrix() [][]bool {
 
-	rMatrix := make([][]bool, 126)
-	for i := 0; i < 126; i++ {
+	rMatrix := make([][]bool, len(g.graph))
+	for i := 0; i < len(g.graph); i++ {
 
-		rMatrix[i] = make([]bool, 126)
+		rMatrix[i] = make([]bool, len(g.graph))
 
-		for j := 0; j < 126; j++ {
+		for j := 0; j < len(g.graph); j++ {
 			rMatrix[i][j] = false
 		}
 		for _, v := range g.graph["192.168.0."+strconv.Itoa(i+1)] { // пам'ятаємо, що вершина 192.168.0.х
@@ -215,7 +216,7 @@ func (g *Graph) reachabMatrix() [][]bool {
 
 func (g *Graph) writeGraphCSV(path string) {
 
-	count := 771 // the count of twisted pairs
+	count, vLen := g.searchTwistedPairs(), len(g.graph) // num of E, num of V
 
 	csvfile, _ := os.Create(path)
 	csvwriter := csv.NewWriter(csvfile)
@@ -224,23 +225,22 @@ func (g *Graph) writeGraphCSV(path string) {
 	//
 	// алгоритм створення мережі
 	//
-	// v[1] : 125  type of relationship 1 : all/{v[1]} (125 ребер)
-	// v[2] : 124  type of relationship 1 : all/{v[1], v[2]} (124 ребер)
-	// v[3] : 123  type of relationship 1 : all/{v[1], v[2], v[3]} (123 ребра)
-	// v[4] : 122  type of relationship 1 : all/{v[1], v[2], v[3], v[4]} (122)
-	// v[5] : 121  type of relationship 1 : all/{v[1], v[2], v[3], v[4], v[5]} (121)
-	// v[6] : 120  type of relationship 1 : all/{v[1], v[2], v[3], v[4], v[5], v[6]} (120)
-	// total : 735
-	// v[7] : 36   type of relationship 1 : v1,v2..,v36 vertexes in V : all/{v[1], v[2], v[3], v[4], v[5], v[6], v[7]} (36)
-	// total : 771
+	// v[1] : vLen - 1  type of relationship 1 : all/{v[1]} ((vLen - 1) ребер)
+	// v[2] : vLen - 2  type of relationship 1 : all/{v[1], v[2]} ((vLen - 2) ребер)
+	// ...
+	// k*vLen <= count;
+	// v[k] : (count % k*vLen) type of relationship 1 : v1,v2..,vk*vLen vertexes in V : all/{v[1], v[2], ..., v[k]} ((count % k*vLen) ребер)
+	// total : count
 
-	i, t, selectedV := 0, 0, make(map[string]int)
+	i, t, z, selectedV := 0, 0, 0, make(map[string]int)
 
 	for v1 := range g.graph {
 
-		selectedV[v1] = t + 1 // обираємо 7 довільних вершин
+		selectedV[v1] = t + 1 // обираємо c довільних вершин
+		vLen--                // кількість вершин до яких можна під'єднати щоразу зменшується
+		z += vLen             // загальна кількість ребер не має перевищувати заданої в звдачі
 
-		if t < 6 {
+		if z < count {
 
 			for v2 := range g.graph { // поєднуємо усі вершини із заданою v1,
 				_, exist := selectedV[v2] // не поєднуємо, якщо вже з'єднали
@@ -252,13 +252,11 @@ func (g *Graph) writeGraphCSV(path string) {
 				}
 			}
 
-		} else { // для сьомої вершини необхідно 36 ребер
+		} else { // для сьомої вершини необхідно cMod ребер
 
-			z := i
+			for v2 := range g.graph { // поєднуємо усі вершини із заданою v1
 
-			for v2 := range g.graph { // поєднуємо усі вершини із заданою v1,
-
-				if i-z > 35 {
+				if i > count-1 {
 					break
 				}
 				_, exist := selectedV[v2] // не поєднуємо, якщо вже з'єднали
@@ -270,13 +268,9 @@ func (g *Graph) writeGraphCSV(path string) {
 				}
 			}
 
-		}
-
-		t++
-
-		if t == 7 {
 			break
 		}
+		t++
 	}
 
 	for _, row := range data {
@@ -315,8 +309,8 @@ func testMatrix(path string) { // перевіримо матрицю на си�
 
 	matrix := g.reachabMatrix()
 
-	for i := 0; i < 126; i++ {
-		for j := 0; j < 126; j++ {
+	for i := 0; i < len(g.graph); i++ {
+		for j := 0; j < len(g.graph); j++ {
 			if matrix[i][j] != matrix[j][i] {
 				log.Fatal("Упс, матриця не симетрична! Дивись: [", i, "] [", j, "] =", matrix[i][j], "!= [", j, "] [", i, "] =", matrix[j][i])
 			}
