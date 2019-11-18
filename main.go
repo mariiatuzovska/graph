@@ -42,18 +42,18 @@ func main() {
 
 	// // (2)
 	// // визначено максимальний час затримки 6 мс
-	// g.maxTime()
+	// g.maxTime(3)
 
 	//
 
-	// (3)
-	// визначено, що всі вершини пов'язані
+	// // (3)
+	// //визначено, що всі вершини пов'язані
 	g.searchDisabled()
 
 	//
 
 	// // визначено 126 вершин і записано до файлу
-	// g.writeVertexCSV("vertex.csv")
+	g.writeVertexCSV("vertex.csv")
 
 	// // визначено матрицю досяжності
 	// m := g.reachabMatrix()
@@ -62,9 +62,19 @@ func main() {
 	// testMatrix()
 
 	// // визначено кількість витих пар
-	// g.searchTwistedPairs()
+	g.searchTwistedPairs()
 
 	//
+
+	// // (4)
+	// // створено довільний граф, у якого максимальний час затримки 4 мс
+	// // у мапі ключі не заіндексовані, тому при кожному виклику в нас різні графи
+	g.writeGraphCSV("G2.csv")
+	// // коректність графу
+	g2 := new(Graph)
+	g2.getDataCSV("G2.csv")
+	// // визначено максимальний час затримки 4 мс
+	g2.maxTime(2)
 
 }
 
@@ -89,7 +99,7 @@ func (g *Graph) getDataCSV(path string) {
 	return
 }
 
-func (g *Graph) bfs(vertex string, step int) {
+func (g *Graph) bfs(vertex string, step int) { // складність O(V+E)
 
 	if step != 0 {
 		g.q = append(g.q[:0], g.q[1:]...) // зміщуємо чергу, видаливши перший елемент, який є вхідним
@@ -120,15 +130,17 @@ func (g *Graph) ping(v1, v2 string) {
 	g.bfs(v1, 0)
 	s, _ := g.road[v2]
 
-	fmt.Println("PING", v2, ": time=", s*2, "ms")
+	fmt.Println("PING", v2, ": time =", s*2, "ms")
 
 }
 
-func (g *Graph) maxTime() {
+func (g *Graph) maxTime(max int) { // видасть усі пари, для яких час затримки >= max*2 ms
 
-	v1, v2, max := "", "", 3
+	v1, v2 := "", ""
 
 	for vertex := range g.graph {
+
+		fmt.Println("Check", vertex)
 
 		g.road, g.q = make(map[string]int), make([]queue, 0)
 		g.bfs(vertex, 0)
@@ -201,6 +213,78 @@ func (g *Graph) reachabMatrix() [][]bool {
 	}
 
 	return rMatrix
+}
+
+func (g *Graph) writeGraphCSV(path string) {
+
+	count := 771 // the count of twisted pairs
+
+	csvfile, _ := os.Create(path)
+	csvwriter := csv.NewWriter(csvfile)
+	data := make([][]string, count)
+
+	// v[1] : 125  type of relationship 1 : all/{v[1]} (125 ребер)
+	// v[2] : 124  type of relationship 1 : all/{v[1], v[2]} (124 ребер)
+	// v[3] : 123  type of relationship 1 : all/{v[1], v[2], v[3]} (123 ребра)
+	// v[4] : 122  type of relationship 1 : all/{v[1], v[2], v[3], v[4]} (122)
+	// v[5] : 121  type of relationship 1 : all/{v[1], v[2], v[3], v[4], v[5]} (121)
+	// v[6] : 120  type of relationship 1 : all/{v[1], v[2], v[3], v[4], v[5], v[6]} (120)
+	// total : 735
+	// v[7] : 36   type of relationship 1 : v1,v2..,v36 vertexes in V : all/{v[1], v[2], v[3], v[4], v[5], v[6], v[7]} (36)
+	// total : 771
+
+	i, t, selectedV := 0, 0, make(map[string]int)
+
+	for v1 := range g.graph {
+
+		selectedV[v1] = t + 1 // обираємо 7 довільних вершин
+
+		if t < 6 {
+
+			for v2 := range g.graph { // поєднуємо усі вершини із заданою v1,
+				_, exist := selectedV[v2] // не поєднуємо, якщо вже з'єднали
+				if exist == false {
+					data[i] = make([]string, 2)
+					data[i][0] = v1
+					data[i][1] = v2
+					i++
+				}
+			}
+
+		} else { // для сьомої вершини необхідно 36 ребер
+
+			z := i
+
+			for v2 := range g.graph { // поєднуємо усі вершини із заданою v1,
+
+				if i-z > 35 {
+					break
+				}
+				_, exist := selectedV[v2] // не поєднуємо, якщо вже з'єднали
+				if exist == false {
+					data[i] = make([]string, 2)
+					data[i][0] = v1
+					data[i][1] = v2
+					i++
+				}
+			}
+
+		}
+
+		t++
+
+		if t == 7 {
+			break
+		}
+	}
+
+	for _, row := range data {
+		_ = csvwriter.Write(row)
+	}
+	csvwriter.Flush()
+	csvfile.Close()
+
+	fmt.Println(i, "nodes has written successfully into", path)
 }
 
 func (g *Graph) writeVertexCSV(path string) {
